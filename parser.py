@@ -4,34 +4,44 @@ from ast import NodeTransformer, NodeVisitor
 
 from package.ast_transformer import *
 
-if __name__ == '__main__':
-    current_dir = os.path.dirname(os.path.realpath(__file__))
-    scripts_dir = os.path.join(current_dir, 'demo')
-    test_feature = "lambda"
-    test_file = os.path.join(scripts_dir, f"{test_feature}_demo.py")
-    build_name = os.path.join(scripts_dir, f"{test_feature}_parsed.py")
+def parse_all_files(path):
+    """
+    Parse all python files in the given path and return a dict of nodes.
+    """
 
-    with open(test_file, 'r', encoding="utf-8") as f:
-        code = f.read()
+    nodes: dict[str, ast.AST] = {}
 
-    node_tree = ast.parse(code)
+    # read all python files in the given path
+    for root, dirs, files in os.walk(path):
+        for file in files:
+            if file.endswith('.py'):
+                with open(os.path.join(root, file), 'r') as f:
+                    code = f.read()
+                    try:
+                        node = ast.parse(code)
+                        rel_path = os.path.relpath(root, path)
+                        rel_path_file = os.path.join(rel_path, file)
+                        nodes[rel_path_file] = node
+                    except SyntaxError as e:
+                        print(f"Error parsing {file}: {e}")
 
-    save_file = os.path.join(scripts_dir, f'{test_feature}.ast')
-    with open(save_file, 'w', encoding="utf-8") as f:
-        f.write(ast.dump(node_tree, indent=4))
+    # init all transformers
+    dec_trans = DecoratorTransformer()
+    lbd_trans = LambdaTransformer()
 
-    transformers = [
-        LambdaTransformer()
-    ]
-    transformed_tree = node_tree
-    for transformer in transformers:
-        transformed_tree = transformer.visit(transformed_tree)
+    # apply all transformers influencing single node-tree
+    for file, node in nodes.items():
+        dec_trans.visit(node)
+        lbd_trans.visit(node)
 
-    save_file = os.path.join(scripts_dir, build_name)
-    with open(save_file, 'w', encoding="utf-8") as f:
-        f.write(ast.unparse(transformed_tree))
+    return nodes
 
-    print("Parsing Done")
+def save_nodes(nodes, path):
+    """
+    Save all nodes to the given path.
+    """
 
-    print("Try generated file")
-    os.system(f"python {save_file}")
+    for file, node in nodes.items():
+        with open(os.path.join(path, file), 'w') as f:
+            f.write(ast.unparse(node))
+

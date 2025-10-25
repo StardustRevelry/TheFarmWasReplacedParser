@@ -22,6 +22,7 @@ class LambdaTransformer(NodeTransformer):
         self.counter = 0
         self.depth = 0
         self.prefix = "__lambda_"
+        # Tracks the starting line number of orelse blocks at each depth to determine if a lambda is in an orelse section
         self.orelse_start_lineno = {}
         self.lambda_functions = {}
         self.ext = False
@@ -54,6 +55,7 @@ class LambdaTransformer(NodeTransformer):
     def visit_Lambda(self, node):
         name = f"{self.prefix}{self.counter}"
         self.counter += 1
+        # Checks if the lambda is in the orelse part of the parent scope using line numbers
         is_orelse = (parent_depth := self.depth - 1) in self.orelse_start_lineno and node.lineno >= self.orelse_start_lineno[parent_depth]
         if self.depth not in self.lambda_functions:
             self.lambda_functions[self.depth] = {}
@@ -67,10 +69,10 @@ class LambdaTransformer(NodeTransformer):
             args=node.args,
             body=[ast.Return(node.body)],
         )
-        self.counter += 1
         ast.copy_location(new_node, scope)
         if not hasattr(new_node, "lineno"):
             new_node.lineno = 1
+        # Recursively visits the new function to handle any nested lambdas
         new_node = self.visit(new_node)
         return new_node
 
@@ -92,5 +94,3 @@ class LambdaTransformer(NodeTransformer):
                     break
             for item in reversed(node):
                 scope.body.insert(pos_after_import, item)
-
-
