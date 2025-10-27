@@ -1,4 +1,5 @@
 import os
+import sys
 import yaml
 import shutil
 
@@ -9,6 +10,10 @@ if __name__ == '__main__':
     with open('config.yaml', 'r') as f:
         config = yaml.safe_load(f)
         save_path = config['SAVE_PATH']
+        stack_depth = config['MAX_STACK_DEPTH']
+
+    # set stack depth
+    sys.setrecursionlimit(stack_depth)
 
     # init dirs
     current_dir = os.path.dirname(os.path.realpath(__file__))
