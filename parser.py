@@ -15,7 +15,7 @@ def parse_all_files(path):
     for root, dirs, files in os.walk(path):
         for file in files:
             if file.endswith('.py'):
-                with open(os.path.join(root, file), 'r') as f:
+                with open(os.path.join(root, file), 'r', encoding='utf-8') as f:
                     code = f.read()
                     try:
                         node = ast.parse(code)
@@ -42,6 +42,10 @@ def save_nodes(nodes, path):
     """
 
     for file, node in nodes.items():
-        with open(os.path.join(path, file), 'w') as f:
+        file_full_path = os.path.join(path, file)
+        file_dir = os.path.dirname(file_full_path)
+        if not os.path.exists(file_dir):
+            os.makedirs(file_dir)
+        with open(file_full_path, 'w', encoding='utf-8') as f:
             f.write(ast.unparse(node))
 
